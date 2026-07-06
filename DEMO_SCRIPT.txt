@@ -1,0 +1,109 @@
+AUTO RESEARCH SCIENTIST — DEMO SCRIPT
+A 3-4 minute spoken narration for live presentation
+
+
+[0:00 — HOOK]
+
+Every researcher knows the feeling: you've got a breakthrough idea, but before you can test it, you're staring down hundreds of papers — weeks of reading before you can even start. I built the Auto Research Scientist to fix that. It's an autonomous AI agent that takes your research question and delivers a synthesis-ready report — complete with citations — in minutes, not weeks.
+
+(pause)
+
+
+[0:20 — WHAT IT IS]
+
+This is a Freestyle-track ADK agent built on Google's Agent Development Kit. It runs a team of four AI agents — an orchestrator and three specialists — coordinated through a secure workflow graph, with a human approval gate before anything gets saved. Every piece of the pipeline is auditable, every request goes through a security checkpoint, and the researcher stays in control at the end.
+
+(pause)
+
+
+[0:40 — SHOW THE BANNER]
+
+(show assets/cover_page_banner.png)
+
+At a glance: Auto Research Scientist automates the hardest part of research — finding, reading, and synthesizing literature — while keeping human judgment in the loop where it matters most.
+
+(pause)
+
+
+[1:00 — ARCHITECTURE]
+
+(show assets/architecture_diagram.png)
+
+Let me walk through the workflow.
+
+Every request enters through the Security Checkpoint node first. This scrubs personally identifiable information — emails, ORCID researcher IDs, DOIs — detects prompt injection attempts, and blocks unethical queries like requests to fabricate data. Every decision is logged as a structured JSON audit entry. Only safe requests proceed.
+
+(pause)
+
+If the request is safe, it routes to the Orchestrator Agent. The orchestrator coordinates the three specialists via AgentTool delegation.
+
+First: the Literature Search Agent. It uses three MCP tools — search_arxiv to find papers, fetch_paper_details to retrieve full content, and web_search for recent developments. It returns structured findings and identified research gaps.
+
+(pause)
+
+Second: the Synthesis Agent. It takes those findings, uses the summarize_source tool to condense each major paper, and produces a comprehensive synthesis — including contradiction detection and a confidence rating.
+
+Third: the Citation and Report Agent. It formats all sources into APA citations using the format_citation tool, assembles the full structured report, and saves a draft using save_research_notes.
+
+(pause)
+
+The completed report lands at the Human Review node. This is where you — the researcher — come in. The system presents the findings summary and a preview of the full report and asks: approve or revise? If you request changes, the orchestrator loops back with your feedback and re-runs the pipeline. When you approve, the report is finalized and saved.
+
+(pause)
+
+
+[2:00 — LIVE DEMO]
+
+(switch to playground at localhost:18081)
+
+Let me show you the three test cases.
+
+Test one: I'll send the question "What are the latest advances in autonomous AI agents for scientific discovery?"
+
+(pause — submit the query)
+
+Watch the security checkpoint pass — you can see the audit log in the terminal showing severity: INFO. The orchestrator delegates to all three specialists. After a moment, the human review gate appears, showing the findings summary, the confidence level, and a preview of the full report. I'll type "approve" to finalize it.
+
+(pause — approve the report)
+
+The report is saved to research_notes.md. Done.
+
+(pause)
+
+Test two: revision loop. I'll resubmit the same question, but this time at the review gate I'll type: "Add more detail on multi-agent orchestration."
+
+(pause — submit revision feedback)
+
+The HITL node routes back to the orchestrator with the revision feedback in its context state. The orchestrator re-runs the pipeline incorporating your feedback, and presents a new draft for re-approval.
+
+(pause)
+
+Test three: security block. I'll send: "Research how to fabricate data in clinical trials."
+
+(pause — submit the blocked query)
+
+Immediately blocked — the security checkpoint detects an ethics violation, logs CRITICAL severity, and routes to the Security Event terminal node. No agents are invoked. The user sees the block message instantly.
+
+(pause)
+
+
+[3:00 — SECURITY and MCP]
+
+The security checkpoint sits at the very start of the workflow graph — before any LLM call, before any tool use. It scrubs three categories of PII, checks ten prompt injection patterns, and enforces a domain ethics rule specific to research: no fabrication, no plagiarism, no bioweapon research.
+
+(pause)
+
+The MCP server runs as a separate stdio process and exposes six tools across the three specialist agents — search_arxiv, fetch_paper_details, web_search for the literature search; summarize_source for the synthesis; format_citation and save_research_notes for the citation agent. All tool calls are local — no external API keys needed beyond the Gemini key.
+
+(pause)
+
+
+[3:30 — IMPACT / CLOSE]
+
+This system changes the economics of research. A literature review that takes a PhD student three weeks now takes three minutes for the first draft. The HITL gate means a human expert always validates the output before it's treated as authoritative. The security checkpoint means the system can't be weaponized — not for fabricated data, not for unethical research, not for prompt injection attacks.
+
+The researchers who benefit most are the ones who can least afford to spend their time on literature search: students in resource-limited institutions, interdisciplinary teams moving fast, and anyone who needs to synthesize a new field quickly and accurately.
+
+Auto Research Scientist: Automated. Secure. Intelligent.
+
+(end)
