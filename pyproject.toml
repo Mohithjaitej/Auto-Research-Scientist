@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "auto-research-scientist"
 version = "0.1.0"
@@ -8,6 +12,9 @@ dependencies = [
     "fastapi",
     "uvicorn",
 ]
+
+[tool.setuptools]
+packages = ["app"]
 
 [tool.vercel]
 entrypoint = "app.fast_api_app:app"
