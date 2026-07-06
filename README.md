@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Auto Research Scientist 🔬
 
 > An autonomous multi-agent AI system that independently searches scientific literature, synthesizes findings, detects contradictions, and produces peer-review-ready research reports — with human-in-the-loop approval.
@@ -338,3 +339,7 @@ See [DEMO_SCRIPT.txt](DEMO_SCRIPT.txt) for a ready-to-read 3–4 minute spoken n
    .adk/
    ```
 > ⚠️ **NEVER push `.env` to GitHub. Your API key will be exposed publicly.
+=======
+# Auto-Research Scientist
+ An autonomous multi-agent AI system that independently searches scientific literature, synthesizes findings, detects contradictions, and produces peer-review-ready research reports — with human-in-the-loop approval.
+>>>>>>> 791a2a9d5d65f5bf00a3f77249d9336ef186c17c
