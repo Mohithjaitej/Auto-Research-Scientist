@@ -8,3 +8,6 @@ dependencies = [
     "fastapi",
     "uvicorn",
 ]
+
+[tool.vercel]
+entrypoint = "app.fast_api_app:app"
