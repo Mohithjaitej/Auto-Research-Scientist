@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import contextlib
+import logging
 import os
 from collections.abc import AsyncIterator
 
@@ -22,7 +23,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from google.adk.cli.fast_api import get_fast_api_app
 from google.adk.runners import Runner
-from google.cloud import logging as google_cloud_logging
 
 from app.app_utils import services
 from app.app_utils.a2a import attach_a2a_routes
@@ -35,25 +35,52 @@ from app.app_utils.telemetry import (
 )
 from app.app_utils.typing import Feedback
 
+# -----------------------------------------------------------------------------
+# Environment
+# -----------------------------------------------------------------------------
+
 load_dotenv()
+
+# Basic telemetry (safe)
 setup_telemetry()
-# Must run before get_fast_api_app to set the tracer provider resource.
-setup_agent_engine_telemetry()
-_, project_id = google.auth.default()
-logging_client = google_cloud_logging.Client()
-logger = logging_client.logger(__name__)
+
+# Default local logger
+logger = logging.getLogger("auto-research-scientist")
+
+# Optional Google Cloud telemetry
+if os.getenv("ENABLE_GCP_TELEMETRY", "false").lower() == "true":
+    try:
+        from google.cloud import logging as google_cloud_logging
+
+        setup_agent_engine_telemetry()
+
+        _, project_id = google.auth.default()
+
+        logging_client = google_cloud_logging.Client(project=project_id)
+        logger = logging_client.logger("auto-research-scientist")
+
+        print(f"✅ Google Cloud telemetry enabled (Project: {project_id})")
+
+    except Exception as e:
+        print(f"⚠️ Google Cloud telemetry disabled: {e}")
+else:
+    print("Google Cloud telemetry disabled.")
+
 allow_origins = (
-    os.getenv("ALLOW_ORIGINS", "").split(",") if os.getenv("ALLOW_ORIGINS") else None
+    os.getenv("ALLOW_ORIGINS", "").split(",")
+    if os.getenv("ALLOW_ORIGINS")
+    else None
 )
 
 AGENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+# -----------------------------------------------------------------------------
+# FastAPI Lifespan
+# -----------------------------------------------------------------------------
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    # Runner for the A2A path, sharing the same session/artifact services as the
-    # adk_api and reasoning_engine paths (see services.py). Imported here so the
-    # agent is built after env/telemetry setup.
     from app.agent import app as adk_app
     from app.agent import root_agent
 
@@ -63,9 +90,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         artifact_service=services.get_artifact_service(),
         auto_create_session=True,
     )
-    # Shared by the A2A path and the reasoning_engine adapter routes.
+
     app.state.runner = runner
     app.state.agent_app_name = adk_app.name
+
     await attach_a2a_routes(
         app,
         agent=root_agent,
@@ -73,8 +101,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         task_store=InMemoryTaskStore(),
         rpc_path=f"/a2a/{adk_app.name}",
     )
+
     yield
 
+
+# -----------------------------------------------------------------------------
+# FastAPI App
+# -----------------------------------------------------------------------------
 
 app: FastAPI = get_fast_api_app(
     agents_dir=AGENT_DIR,
@@ -85,31 +118,46 @@ app: FastAPI = get_fast_api_app(
     otel_to_cloud=False,
     lifespan=lifespan,
 )
-app.title = "auto-research-scientist"
-app.description = "API for interacting with the Agent auto-research-scientist"
+
+app.title = "Auto Research Scientist"
+app.description = "API for interacting with the Auto Research Scientist agent"
 
 
-# Proxy routes so the Vertex AI Console Playground (reasoning_engine SDK) can
-# talk to this agent alongside the native adk_api routes.
+# -----------------------------------------------------------------------------
+# Vertex AI Playground compatibility
+# -----------------------------------------------------------------------------
+
 attach_reasoning_engine_routes(app)
 
 
+# -----------------------------------------------------------------------------
+# Feedback Endpoint
+# -----------------------------------------------------------------------------
+
 @app.post("/feedback")
 def collect_feedback(feedback: Feedback) -> dict[str, str]:
-    """Collect and log feedback.
+    try:
+        if hasattr(logger, "log_struct"):
+            logger.log_struct(feedback.model_dump(), severity="INFO")
+        else:
+            logger.info(feedback.model_dump())
+    except Exception:
+        pass
 
-    Args:
-        feedback: The feedback data to log
-
-    Returns:
-        Success message
-    """
-    logger.log_struct(feedback.model_dump(), severity="INFO")
     return {"status": "success"}
 
 
-# Main execution
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
+
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", 8000))
+
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=port,
+    )
